@@ -54,7 +54,7 @@ class ThisMilter(Milter.Base):
             env_addr_start = ""
         if data["env_replacement"].endswith(env_addr_end):
             env_addr_end = ""
-        data["env_replacement"] = "{}{}{}".format(env_addr_start, actx, env_addr_end)
+        data["env_replacement"] = "{}{}{}".format(env_addr_start, data["env_replacement"], env_addr_end)
         if data["env_sender"] is not None:
             self.log.info("{}: search{}: in sender address {} for pattern {}".format(self.ID,
                                                                                      self.MODETXT,
