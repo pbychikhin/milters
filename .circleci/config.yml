@@ -1,0 +1,79 @@
+
+version: 2
+
+jobs:
+  build:
+    docker:
+      - image: centos:7
+    environment:
+      ARTIFACTSDIR: &ARTIFACTSDIR
+        artifacts
+      MAINFILES: "*.py"
+      AUXFILES: |
+        milter_env_addr_mangle.sh
+        milter_env_addr_mangle.yml
+      GOPATH: "/GO"
+      GOBIN: "/GO/bin"
+    branches:
+      only:
+        - master
+    steps:
+      - run:
+          name: Install prerequisites
+          command: yum -y install git zip go
+      - run:
+          name: Configure Git
+          command: git config --global core.autocrlf true
+      - run:
+          name: Get Github release uploader
+          command: |
+            mkdir $GOPATH
+            go get github.com/itchio/gothub
+      - checkout
+      - run:
+          name: Make the artifacts directory
+          command: mkdir $ARTIFACTSDIR
+      - run:
+          name: Process files
+          command: |
+            declare -A FILEDESC
+            FILEMAXDESC="unknown"
+            FILEMAXREV=0
+            get_file_info()
+              {
+              DESC=$(git describe --long $(git log -n 1 --pretty=%H $1))
+              NUM=$(echo $DESC|cut -d - -f 1)
+              FILEDESC[$1]=$DESC
+              if [ $NUM \> $FILEMAXREV ]
+              then
+                FILEMAXREV=$NUM
+                FILEMAXDESC=$DESC
+              fi
+              }
+            for FILE in $MAINFILES
+            do
+              echo "Processing main file $FILE"
+              get_file_info $FILE
+              sed "s/^_FILE_VER\s*=\s*\"to_be_filled_by_CI\"/_FILE_VER = \"${FILEDESC[$FILE]}\"/" $FILE > $ARTIFACTSDIR/$FILE
+            done
+            for FILE in $AUXFILES
+            do
+              echo "Copying auxiliary file $FILE"
+              get_file_info $FILE
+              cp $FILE $ARTIFACTSDIR
+            done
+            echo "Also archiving everything"
+            FILEDESC[$CIRCLE_PROJECT_REPONAME.zip]=$(echo $FILEMAXDESC|cut -d - -f 1)
+            (cd $ARTIFACTSDIR && zip $CIRCLE_PROJECT_REPONAME.zip *)
+            mkdir tmp
+            declare -p FILEDESC FILEMAXDESC > tmp/vars
+      - deploy:
+          name: Upload to Github
+          command: |
+            . tmp/vars
+            TAG=$(echo $FILEMAXDESC|cut -d - -f 1)
+            for FILE in $ARTIFACTSDIR/*
+            do
+              echo "Uploading $FILE, version is ${FILEDESC[$(basename $FILE)]}"
+              $GOBIN/gothub upload -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME -t $TAG -f $FILE -n $(basename $FILE) -R -l "$(basename $FILE) (${FILEDESC[$(basename $FILE)]})"
+            done

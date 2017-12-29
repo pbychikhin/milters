@@ -1,0 +1,5 @@
+1.0
+- milter_env_addr_mangle:
+    - added application (py), sample config (yml), Debian init scrips (sh)
+- added CircleCI config
+- added this (changelog.txt) file

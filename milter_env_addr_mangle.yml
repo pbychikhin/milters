@@ -1,0 +1,6 @@
+
+- env_sender: 'sender1@localhost'
+  env_recipient: 'recipient1@localhost'
+  subject: 'Hello!'
+  actions:
+    - replace_recipient: 'recipient2@localhost'
