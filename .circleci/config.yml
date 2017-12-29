@@ -12,6 +12,7 @@ jobs:
       AUXFILES: |
         milter_env_addr_mangle.sh
         milter_env_addr_mangle.yml
+        changelog.txt
       GOPATH: "/GO"
       GOBIN: "/GO/bin"
     branches:
