@@ -24,7 +24,7 @@ jobs:
           command: yum -y install git zip go
       - run:
           name: Configure Git
-          command: git config --global core.autocrlf true
+          command: git config --global core.autocrlf input
       - run:
           name: Get Github release uploader
           command: |
