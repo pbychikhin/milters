@@ -4,3 +4,11 @@
   subject: 'Hello!'
   actions:
     - replace_recipient: 'recipient2@localhost'
+
+- env_sender: 'sender1@localhost'
+  env_recipient: 'recipient2@localhost'
+  subject: 'Hello!'
+  actions:
+    - add_recipient:
+      - 'recipient4@localhost'
+      - 'recipient5@localhost'
