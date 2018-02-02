@@ -256,7 +256,6 @@ if __name__ == "__main__":
     log_logger = logging.getLogger(prog_name)
     log_logger.addHandler(log_handler)
     log_logger.setLevel(getattr(logging, cmdargs.ll.upper()))
-    timeout = 60
     Milter.set_flags(Milter.ADDRCPT | Milter.DELRCPT)
     Milter.factory = mfactory(log_logger, cfgobj, cmdargs.p)
     Milter.runmilter(prog_name, cmdargs.s, cmdargs.t)
