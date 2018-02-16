@@ -1,3 +1,9 @@
+1.1
+- milter_env_addr_mangle:
+    - changed the merging algorithm: actions don't change data directly. they add changes to the special list instead.
+      this list is processed in the end after all actions so the changes made by one action will not be discarded by
+      another one.
+
 1.0
 - milter_env_addr_mangle:
     - added application (py), sample config (yml), Debian init scrips (sh)

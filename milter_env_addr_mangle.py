@@ -80,8 +80,10 @@ class ThisMilter(Milter.Base):
                     self.log.warning("{}: replace{}: recipient {} with {}".format(self.ID, self.MODETXT, addr, data["env_replacement"]))
                     changed[i] = data["env_replacement"]
                 i += 1
-            self.T["changed"] = set(changed)
-            self.log.debug("{}: recipients{}: {}".format(self.ID, self.MODETXT, self.T["changed"]))
+            changed = set(changed)
+            self.step_changes.append((self.T["changed"].difference_update, self.T["changed"] - changed))  # First, we're removing the elements that's been replaced
+            self.step_changes.append((self.T["changed"].update, changed - self.T["changed"]))             # Second, we're adding the replacing elements
+            self.log.debug("{}: recipients{}: {}".format(self.ID, self.MODETXT, changed))
 
     def action_add_recipient(self, sctx, actx):
         """
@@ -133,12 +135,13 @@ class ThisMilter(Milter.Base):
         if (data["env_sender"] is None or re.search(data["env_sender"], self.F, re.I)) and \
                 (data["subject"] is None or re.search(data["subject"], self.headers["subject"], re.I | re.UNICODE)):
             found = False
+            changed = set(self.T["changed"])
             if data["env_recipient"] is None:
                 self.log.info("{}: search{}: accept any recipient address".format(self.ID, self.MODETXT))
                 found = True
             else:
                 re_rcpt = re.compile(data["env_recipient"], re.I)
-                for addr in self.T["changed"]:
+                for addr in changed:
                     self.log.info("{}: search{}: in recipient address {} for pattern {}".
                                   format(self.ID, self.MODETXT, addr, data["env_recipient"]))
                     if re_rcpt.search(addr):
@@ -147,8 +150,9 @@ class ThisMilter(Milter.Base):
             if found:
                 self.log.warning("{}: add{}: recipient {}".format(self.ID, self.MODETXT,
                                                                   ",".join(a for a in data["env_addition"])))
-                self.T["changed"] |= data["env_addition"]
-                self.log.debug("{}: recipients{}: {}".format(self.ID, self.MODETXT, self.T["changed"]))
+                changed |= data["env_addition"]
+                self.step_changes.append((self.T["changed"].update, changed - self.T["changed"]))
+                self.log.debug("{}: recipients{}: {}".format(self.ID, self.MODETXT, changed))
 
     def commit_T(self):
         for addr in self.T["original"] - self.T["changed"]:
@@ -170,9 +174,16 @@ class ThisMilter(Milter.Base):
                         actions = pval
                     else:
                         sctx[pkey] = pval
+                self.step_changes = []  # Each action should add a 2-element tuple to this list.
+                                        # The firs element is a method that merges the changes which are made by the action.
+                                        # The second element is the data to be processed by the first element.
                 for action in actions:
                     for akey, aval in action.iteritems():
                         self.actions[akey](sctx, aval)
+                for change in self.step_changes:
+                    self.log.debug("{}: merge{}: {} for {}".format(self.ID, self.MODETXT, change[0], change[1]))
+                    change[0](change[1])
+                    self.log.debug("{}: merge{}: updated object is now {}".format(self.ID, self.MODETXT, change[0].__self__))
 
     def do_commits(self):
         for commit in self.commits:
