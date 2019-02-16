@@ -30,6 +30,31 @@ class ThisMilter(Milter.Base):
                         "add_recipient": self.action_add_recipient}
         self.commits = [self.commit_T]
 
+    def __search(self, data, mode_and=True):
+        """
+        Searching phase. Used in actions below
+        :param data: [{"name": "a descriptive name", "data": "some text", "pattern": "a pattern to search for", "is_unicode": True}, ...]
+        :param mode_and: True if all fields should match
+        :return: True or False
+        """
+        for item in data:
+            if item["data"] is not None:
+                self.log.info("{}: search{}: in {} {} for pattern {}".format(
+                    self.ID,
+                    self.MODETXT,
+                    item["name"],
+                    item["data"].encode("unicode_escape") if item["is_unicode"] else item["data"],
+                    item["pattern"].encode("unicode_escape") if item["is_unicode"] else item["pattern"]
+                ))
+                if re.search(item["pattern"], item["data"], re.I | re.UNICODE if item["is_unicode"] else re.I):
+                    if not mode_and:
+                        return True
+                else:
+                    return False
+            else:
+                self.log.info("{}: search{}: accept any {}".format(self.ID, self.MODETXT, item["name"])
+        return True
+
     def action_replace_recipient(self, sctx, actx):
         """
         Replaces recipient's address in the message
