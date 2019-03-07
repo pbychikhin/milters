@@ -55,6 +55,19 @@ class ThisMilter(Milter.Base):
                 self.log.info("{}: search{}: accept any {}".format(self.ID, self.MODETXT, item["name"])
         return True
 
+    def action_del_recipient(self, sctx, actx):
+        """
+        Deletes recipient's address in the message
+        :param sctx: step context
+        :param actx: action context
+        :return: nothing
+        """
+        data = [
+            "env_sender": str(sctx["env_sender"]) if "env_sender" in sctx and sctx["env_sender"] is not None else None,
+            "env_recipient": str(sctx["env_recipient"]) if "env_recipient" in sctx and sctx["env_recipient"] is not None else None,
+            "subject": unicode(sctx["subject"]) if "subject" in sctx and sctx["subject"] is not None else None,
+        ]
+
     def action_replace_recipient(self, sctx, actx):
         """
         Replaces recipient's address in the message
