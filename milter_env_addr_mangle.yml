@@ -12,3 +12,11 @@
     - add_recipient:
       - 'recipient4@localhost'
       - 'recipient5@localhost'
+
+- env_sender: 'sender1@localhost'
+  env_recipient: 'recipient4@localhost'
+  subject: 'Hello!'
+  actions:
+    - del_recipient:
+      - 'recipient4@localhost'
+      - 'recipient6@localhost'

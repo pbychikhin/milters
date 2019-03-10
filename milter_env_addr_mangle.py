@@ -27,7 +27,8 @@ class ThisMilter(Milter.Base):
         # And I can't imagine a situation when this may be wrong.
         self.headers = {"subject": u""}
         self.actions = {"replace_recipient": self.action_replace_recipient,
-                        "add_recipient": self.action_add_recipient}
+                        "add_recipient": self.action_add_recipient,
+                        "del_recipient": self.action_del_recipient}
         self.commits = [self.commit_T]
 
     def __search(self, data, mode_and=True):
