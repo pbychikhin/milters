@@ -33,27 +33,50 @@ class ThisMilter(Milter.Base):
     def __search(self, data, mode_and=True):
         """
         Searching phase. Used in actions below
-        :param data: [{"name": "a descriptive name", "data": "some text", "pattern": "a pattern to search for", "is_unicode": True}, ...]
+        :param data: [{"name": "a descriptive name", "data": a list or tuple of "some text", "pattern": "a pattern to search for", "is_unicode": True}, ...]
         :param mode_and: True if all fields should match
         :return: True or False
         """
+        if "is_unicode" not in data:
+            data["is_unicode"] = True  # If is_unicode is not set explicitly, we're assuming True
         for item in data:
             if item["data"] is not None:
-                self.log.info("{}: search{}: in {} {} for pattern {}".format(
-                    self.ID,
-                    self.MODETXT,
-                    item["name"],
-                    item["data"].encode("unicode_escape") if item["is_unicode"] else item["data"],
-                    item["pattern"].encode("unicode_escape") if item["is_unicode"] else item["pattern"]
-                ))
-                if re.search(item["pattern"], item["data"], re.I | re.UNICODE if item["is_unicode"] else re.I):
-                    if not mode_and:
-                        return True
+                if not isinstance(item["data"], (list, tuple)):
+                    data_data = (item["data"], )
                 else:
-                    return False
+                    data_data = tuple(item["data"])
+                for item_dd in data_data:
+                    self.log.info("{}: search{}: in {} {} for pattern {}".format(
+                        self.ID,
+                        self.MODETXT,
+                        item["name"],
+                        item_dd.encode("unicode_escape") if item["is_unicode"] else item_dd,
+                        item["pattern"].encode("unicode_escape") if item["is_unicode"] else item["pattern"]
+                    ))
+                    if item_dd is not None and re.search(item["pattern"], item_dd, re.I | re.UNICODE if item["is_unicode"] else re.I):
+                        if not mode_and:
+                            return True
+                        pass
+                    else:
+                        return False
             else:
-                self.log.info("{}: search{}: accept any {}".format(self.ID, self.MODETXT, item["name"])
+                self.log.info("{}: search{}: accept any {}".format(self.ID, self.MODETXT, item["name"]))
         return True
+
+    @staticmethod
+    def __normalize_address(address):
+        """
+        Returns an email address enclosed in < and > brackets
+        :param address:
+        :return: normalized address
+        """
+        env_addr_start = "<"
+        env_addr_end = ">"
+        if address.startswith(env_addr_start):
+            env_addr_start = ""
+        if address.endswith(env_addr_end):
+            env_addr_end = ""
+        return "{}{}{}".format(env_addr_start, address, env_addr_end)
 
     def action_del_recipient(self, sctx, actx):
         """
@@ -62,11 +85,51 @@ class ThisMilter(Milter.Base):
         :param actx: action context
         :return: nothing
         """
-        data = [
-            "env_sender": str(sctx["env_sender"]) if "env_sender" in sctx and sctx["env_sender"] is not None else None,
-            "env_recipient": str(sctx["env_recipient"]) if "env_recipient" in sctx and sctx["env_recipient"] is not None else None,
-            "subject": unicode(sctx["subject"]) if "subject" in sctx and sctx["subject"] is not None else None,
+        search_clauses = [
+            {
+                "name": "Envelope Sender",
+                "data": self.F,
+                "pattern": sctx["env_sender"],
+                "is_unicode": False
+            } if "env_sender" in sctx and sctx["env_sender"] is not None and not sctx["env_sender"].isspace() else None,
+            {
+                "name": "Envelope Recipient",
+                "data": self.T["changed"],
+                "pattern": sctx["env_recipient"],
+                "is_unicode": False
+            } if "env_recipient" in sctx and sctx["env_recipient"] is not None and not sctx["env_recipient"].isspace() else None,
         ]
+        for name in ("Subject", "From"):
+            name_lower = name.lower()
+            search_clauses.append(
+                {
+                    "name": name,
+                    "data": self.headers[name_lower] if name_lower in self.headers and self.headers[name_lower] is not None else None,
+                    "pattern": sctx[name_lower]
+                } if name_lower in sctx and sctx[name_lower] is not None else None
+            )
+        if self.__search(search_clauses):
+            if not isinstance(actx, list):
+                str_actx = str(actx)
+                if actx is None or str_actx.isspace():
+                    raise RuntimeError("No address for deletion given or the address is invalid")
+                env_deletion = [re.compile(str_actx, re.I)]
+            else:
+                env_deletion = []
+                for item in actx:
+                    str_item = str(item)
+                    if item is None or str_item.isspace():
+                        raise RuntimeError("No address for deletion given or the address is invalid")
+                    env_deletion.append(re.compile(str_item, re.I))
+            changed = set(self.T["changed"])
+            for titem in self.T["changed"]:
+                for ditem in env_deletion:
+                    if ditem.search(titem):
+                        self.log.warning("{}: del{}: recipient {}".format(self.ID, self.MODETXT, titem))
+                        changed.remove(titem)
+                        break
+            self.step_changes.append((self.T["changed"].intersection_update, changed))
+            self.log.debug("{}: recipients{}: {}".format(self.ID, self.MODETXT, changed))
 
     def action_replace_recipient(self, sctx, actx):
         """
