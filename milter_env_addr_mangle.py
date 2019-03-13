@@ -139,6 +139,41 @@ class ThisMilter(Milter.Base):
         :param actx: action context
         :return: nothing
         """
+        search_clauses = [
+            {
+                "name": "Envelope Sender",
+                "data": self.F,
+                "pattern": sctx["env_sender"],
+                "is_unicode": False
+            } if "env_sender" in sctx and sctx["env_sender"] is not None and not sctx["env_sender"].isspace() else None,
+            {
+                "name": "Envelope Recipient",
+                "data": self.T["changed"],
+                "pattern": sctx["env_recipient"],
+                "is_unicode": False
+            } if "env_recipient" in sctx and sctx["env_recipient"] is not None and not sctx[
+                "env_recipient"].isspace() else None,
+        ]
+        for name in ("Subject", "From"):
+            name_lower = name.lower()
+            search_clauses.append(
+                {
+                    "name": name,
+                    "data": self.headers[name_lower] if name_lower in self.headers and self.headers[
+                        name_lower] is not None else None,
+                    "pattern": sctx[name_lower]
+                } if name_lower in sctx and sctx[name_lower] is not None else None
+            )
+        if self.__search(search_clauses):
+            env_replacement =
+
+    def action_replace_recipient(self, sctx, actx):
+        """
+        Replaces recipient's address in the message
+        :param sctx: step context
+        :param actx: action context
+        :return: nothing
+        """
         data = {
             "env_sender": str(sctx["env_sender"]) if "env_sender" in sctx and sctx["env_sender"] is not None else None,
             "env_recipient": str(sctx["env_recipient"]) if "env_recipient" in sctx and sctx["env_recipient"] is not None else None,
