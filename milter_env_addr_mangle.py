@@ -139,8 +139,20 @@ class ThisMilter(Milter.Base):
         :param actx: action context
         :return: nothing
         """
-        env_recipient, env_replacement = (str(sctx[x])
-            if x in sctx and sctx[x] is not None and not str(sctx[x]).isspace() else None for x in ("env_recipient", "env_replacement"))
+        env_recipient = str(sctx["env_recipient"]) if "env_recipient" in sctx and sctx["env_recipient"] is not None \
+                                                      and not str(sctx["env_recipient"]).isspace() else None
+        if not isinstance(actx, list):
+            str_actx = str(actx)
+            if actx is None or str_actx.isspace():
+                raise RuntimeError("No address for deletion given or the address is invalid")
+            env_replacement = [re.compile(str_actx, re.I)]
+        else:
+            env_replacement = []
+            for item in actx:
+                str_item = str(item)
+                if item is None or str_item.isspace():
+                    raise RuntimeError("No address for deletion given or the address is invalid")
+                env_replacement.append(re.compile(str_item, re.I))
         for k, v in [{env_recipient, "recipient's"}, {env_replacement, "replacing"}]:
             if k is None:
                 raise RuntimeError("No {} address given or the address is invalid".format(v))
