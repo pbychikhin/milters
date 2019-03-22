@@ -80,14 +80,32 @@ class ThisMilter(Milter.Base):
         return "{}{}{}".format(env_addr_start, address, env_addr_end)
 
     @staticmethod
-    def __prepare_action(actx, map_func=None, map_func_args=None):
+    def __prepare_action(actx, actx_desc, map_func=None, map_func_args=None):
         """
         Processes action context and returns a list of strings or mapping function return values
         :param actx: actions context - a string or a list of strings. If an item is not a string, it will be casted to string
+        :param actx_desc: action context description. Used in log messages
         :param map_func: optional function to be mapped to an items in actx
-        :param map_func_args: list of map_func arguments. Firs argumens is an item from actx
+        :param map_func_args: list of map_func arguments. Firs argument is an item from actx
         :return: a list of strings or mapping function return values
         """
+        def basic_map_func(*arg):
+            return arg[0]
+        map_func = basic_map_func if map_func is None else map_func
+        map_func_args = [] if map_func_args is None else map_func_args
+        if not isinstance(actx, (list, tuple)):
+            str_actx = str(actx)
+            if actx is None or len(actx) == 0 or str_actx.isspace():
+                raise RuntimeError("{} is not given or invalid".format(actx_desc))
+            rv = [map_func(*[str_actx] + map_func_args)]
+        else:
+            rv = []
+            for item in actx:
+                str_item = str(item)
+                if item is None or len(actx) == 0 or str_item.isspace():
+                    raise RuntimeError("{} is not given or invalid".format(actx_desc))
+                rv.append(map_func(*[str_item] + map_func_args))
+        return rv
 
     def action_del_recipient(self, sctx, actx):
         """
