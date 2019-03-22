@@ -80,7 +80,18 @@ class ThisMilter(Milter.Base):
         return "{}{}{}".format(env_addr_start, address, env_addr_end)
 
     @staticmethod
-    def __prepare_action(actx, actx_desc, map_func=None, map_func_args=None):
+    def __str_or_none(var):
+        """
+        Ensure var is non-empty string
+        :param var: supposedly, a string
+        :return: var as a str or None if var is None or empty str
+        """
+        str_var = str(var)
+        if var is None or len(str_var) == 0 or str_var.isspace():
+            return None
+        return str_var
+
+    def __prepare_action(self, actx, actx_desc, map_func=None, map_func_args=None):
         """
         Processes action context and returns a list of strings or mapping function return values
         :param actx: actions context - a string or a list of strings. If an item is not a string, it will be casted to string
@@ -94,15 +105,15 @@ class ThisMilter(Milter.Base):
         map_func = basic_map_func if map_func is None else map_func
         map_func_args = [] if map_func_args is None else map_func_args
         if not isinstance(actx, (list, tuple)):
-            str_actx = str(actx)
-            if actx is None or len(actx) == 0 or str_actx.isspace():
+            str_actx = self.__str_or_none(actx)
+            if str_actx is None:
                 raise RuntimeError("{} is not given or invalid".format(actx_desc))
             rv = [map_func(*[str_actx] + map_func_args)]
         else:
             rv = []
             for item in actx:
-                str_item = str(item)
-                if item is None or len(actx) == 0 or str_item.isspace():
+                str_item = self.__str_or_none(item)
+                if str_item is None:
                     raise RuntimeError("{} is not given or invalid".format(actx_desc))
                 rv.append(map_func(*[str_item] + map_func_args))
         return rv
@@ -118,14 +129,18 @@ class ThisMilter(Milter.Base):
             {
                 "name": "Envelope Sender",
                 "data": self.F,
-                "pattern": str(sctx["env_sender"]) if "env_sender" in sctx \
-                    and sctx["env_sender"] is not None and not str(sctx["env_sender"]).isspace() else None
+                "pattern": str(sctx["env_sender"]) if "env_sender" in sctx
+                                                      and sctx["env_sender"] is not None
+                                                      and len(sctx["env_sender"]) > 0
+                                                      and not str(sctx["env_sender"]).isspace() else None
             },
             {
                 "name": "Envelope Recipient",
                 "data": self.T["changed"],
-                "pattern": str(sctx["env_recipient"]) if "env_recipient" in sctx \
-                    and sctx["env_recipient"] is not None and not str(sctx["env_recipient"]).isspace() else None
+                "pattern": str(sctx["env_recipient"]) if "env_recipient" in sctx
+                                                         and sctx["env_recipient"] is not None
+                                                         and len(sctx["env_recipient"]) > 0
+                                                         and not str(sctx["env_recipient"]).isspace() else None
             }
         ]
         for name in ("Subject", "From"):
@@ -138,18 +153,7 @@ class ThisMilter(Milter.Base):
                 }
             )
         if self.__search(search_clauses):
-            if not isinstance(actx, list):
-                str_actx = str(actx)
-                if actx is None or str_actx.isspace():
-                    raise RuntimeError("No address for deletion given or the address is invalid")
-                env_deletion = [re.compile(str_actx, re.I)]
-            else:
-                env_deletion = []
-                for item in actx:
-                    str_item = str(item)
-                    if item is None or str_item.isspace():
-                        raise RuntimeError("No address for deletion given or the address is invalid")
-                    env_deletion.append(re.compile(str_item, re.I))
+            env_deletion = self.__prepare_action(actx, "address for deletion", re.compile, [re.I])
             changed = set(self.T["changed"])
             for titem in self.T["changed"]:
                 for ditem in env_deletion:
