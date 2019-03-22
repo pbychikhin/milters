@@ -79,6 +79,16 @@ class ThisMilter(Milter.Base):
             env_addr_end = ""
         return "{}{}{}".format(env_addr_start, address, env_addr_end)
 
+    @staticmethod
+    def __prepare_action(actx, map_func=None, map_func_args=None):
+        """
+        Processes action context and returns a list of strings or mapping function return values
+        :param actx: actions context - a string or a list of strings. If an item is not a string, it will be casted to string
+        :param map_func: optional function to be mapped to an items in actx
+        :param map_func_args: list of map_func arguments. Firs argumens is an item from actx
+        :return: a list of strings or mapping function return values
+        """
+
     def action_del_recipient(self, sctx, actx):
         """
         Deletes recipient's address in the message
