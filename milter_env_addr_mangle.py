@@ -81,13 +81,14 @@ class ThisMilter(Milter.Base):
         return "{}{}{}".format(env_addr_start, address, env_addr_end)
 
     @staticmethod
-    def __str_or_none(var):
+    def __str_or_none(var, str_func=str):
         """
         Ensure var is non-empty string
         :param var: supposedly, a string
+        :param str_func: a function which returns string. Can be re-defined to return, for instance, unicode
         :return: var as a str or None if var is None or empty str
         """
-        str_var = str(var)
+        str_var = str_func(var)
         if var is None or len(str_var) == 0 or str_var.isspace():
             return None
         return str_var
