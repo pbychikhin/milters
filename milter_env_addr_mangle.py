@@ -25,7 +25,8 @@ class ThisMilter(Milter.Base):
         self.MODETXT = " (dry run)" if not prod_mode else ""
         # Empty default subject seems correct for cases when subject is empty or omitted.
         # And I can't imagine a situation when this may be wrong.
-        self.headers = {"subject": u""}
+        self.headers = {"subject": u"",
+                        "from": u""}
         self.actions = {"replace_recipient": self.action_replace_recipient,
                         "add_recipient": self.action_add_recipient,
                         "del_recipient": self.action_del_recipient}
