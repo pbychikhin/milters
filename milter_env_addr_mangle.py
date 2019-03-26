@@ -131,27 +131,21 @@ class ThisMilter(Milter.Base):
             {
                 "name": "Envelope Sender",
                 "data": self.F,
-                "pattern": str(sctx["env_sender"]) if "env_sender" in sctx
-                                                      and sctx["env_sender"] is not None
-                                                      and len(sctx["env_sender"]) > 0
-                                                      and not str(sctx["env_sender"]).isspace() else None
+                "pattern": self.__str_or_none(sctx.get("env_sender"))
             },
             {
                 "name": "Envelope Recipient",
                 "data": self.T["changed"],
-                "pattern": str(sctx["env_recipient"]) if "env_recipient" in sctx
-                                                         and sctx["env_recipient"] is not None
-                                                         and len(sctx["env_recipient"]) > 0
-                                                         and not str(sctx["env_recipient"]).isspace() else None
+                "pattern": self.__str_or_none(sctx.get("env_recipient"))
             }
         ]
-        for name in ("Subject", "From"):
+        for name in self.headers.keys():
             name_lower = name.lower()
             search_clauses.append(
                 {
                     "name": name,
-                    "data": self.headers[name_lower] if name_lower in self.headers and self.headers[name_lower] is not None else None,
-                    "pattern": unicode(sctx[name_lower]) if name_lower in sctx and sctx[name_lower] is not None else None
+                    "data": self.headers.get(name_lower),
+                    "pattern": self.__str_or_none(sctx.get(name_lower), unicode)
                 }
             )
         if self.__search(search_clauses):
