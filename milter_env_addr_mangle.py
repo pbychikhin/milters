@@ -167,29 +167,14 @@ class ThisMilter(Milter.Base):
         :param actx: action context
         :return: nothing
         """
-        env_recipient = str(sctx["env_recipient"]) if "env_recipient" in sctx and sctx["env_recipient"] is not None \
-                                                      and not str(sctx["env_recipient"]).isspace() else None
-        if not isinstance(actx, list):
-            str_actx = str(actx)
-            if actx is None or str_actx.isspace():
-                raise RuntimeError("No address for deletion given or the address is invalid")
-            env_replacement = [re.compile(str_actx, re.I)]
-        else:
-            env_replacement = []
-            for item in actx:
-                str_item = str(item)
-                if item is None or str_item.isspace():
-                    raise RuntimeError("No address for deletion given or the address is invalid")
-                env_replacement.append(re.compile(str_item, re.I))
-        for k, v in [{env_recipient, "recipient's"}, {env_replacement, "replacing"}]:
-            if k is None:
-                raise RuntimeError("No {} address given or the address is invalid".format(v))
+        env_recipient = self.__str_or_none(sctx.get("env_recipient"))
+        if env_recipient is None:
+            raise RuntimeError("{} is not given or invalid".format("Envelope Recipient"))
         search_clauses = [
             {
                 "name": "Envelope Sender",
                 "data": self.F,
-                "pattern": str(sctx["env_sender"]) if "env_sender" in sctx \
-                    and sctx["env_sender"] is not None and not str(sctx["env_sender"]).isspace() else None
+                "pattern": self.__str_or_none(sctx.get("env_sender"))
             },
             {
                 "name": "Envelope Recipient",
@@ -197,17 +182,37 @@ class ThisMilter(Milter.Base):
                 "pattern": env_recipient
             }
         ]
-        for name in ("Subject", "From"):
+        for name in self.headers.keys():
             name_lower = name.lower()
             search_clauses.append(
                 {
                     "name": name,
-                    "data": self.headers[name_lower] if name_lower in self.headers and self.headers[name_lower] is not None else None,
-                    "pattern": unicode(sctx[name_lower]) if name_lower in sctx and sctx[name_lower] is not None else None
+                    "data": self.headers.get(name_lower),
+                    "pattern": self.__str_or_none(sctx.get(name_lower), unicode)
                 }
             )
         if self.__search(search_clauses):
-            env_replacement = self.__normalize_address(env_replacement)
+            env_replacement = self.__prepare_action(actx, "address for replacement", self.__normalize_address)
+            re_rcpt = re.compile(data["env_recipient"], re.I)
+            changed = set(self.T["changed"])
+            for titem in self.T["changed"]:
+
+
+            i = 0
+            for addr in changed:
+                self.log.info("{}: search{}: in recipient address {} for pattern {}".
+                              format(self.ID, self.MODETXT, addr, data["env_recipient"]))
+                if re_rcpt.search(addr):
+                    self.log.warning("{}: replace{}: recipient {} with {}".format(self.ID, self.MODETXT, addr,
+                                                                                  data["env_replacement"]))
+                    changed[i] = data["env_replacement"]
+                i += 1
+            changed = set(changed)
+            self.step_changes.append((self.T["changed"].difference_update, self.T[
+                "changed"] - changed))  # First, we're removing the elements that's been replaced
+            self.step_changes.append(
+                (self.T["changed"].update, changed - self.T["changed"]))  # Second, we're adding the replacing elements
+            self.log.debug("{}: recipients{}: {}".format(self.ID, self.MODETXT, changed))
 
     def action_replace_recipient(self, sctx, actx):
         """
