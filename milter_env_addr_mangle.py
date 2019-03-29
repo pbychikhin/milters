@@ -193,12 +193,12 @@ class ThisMilter(Milter.Base):
             )
         if self.__search(search_clauses):
             env_replacement = self.__prepare_action(actx, "address for replacement", self.__normalize_address)
-            re_rcpt = re.compile(data["env_recipient"], re.I)
+            re_rcpt = re.compile(env_recipient, re.I)
             changed = set(self.T["changed"])
             replaced = False
             for titem in self.T["changed"]:
                 if re_rcpt.search(titem):
-                    self.log.warning("{}: replace{}: recipient {} with {}".format(self.ID, self.MODETXT, titem, env_replacement))
+                    self.log.warning("{}: replace{}: recipient {} with {}".format(self.ID, self.MODETXT, titem, ",".join(a for a in env_replacement)))
                     changed.remove(titem)
                     replaced = True
             if replaced:
@@ -214,67 +214,34 @@ class ThisMilter(Milter.Base):
         :param actx: action context
         :return: nothing
         """
-        data = {
-            "env_sender": str(sctx["env_sender"]) if "env_sender" in sctx and sctx["env_sender"] is not None else None,
-            "env_recipient": str(sctx["env_recipient"]) if "env_recipient" in sctx and sctx["env_recipient"] is not None else None,
-            "subject": unicode(sctx["subject"]) if "subject" in sctx and sctx["subject"] is not None else None,
-        }
-        if data["env_sender"] is not None and data["env_sender"].isspace():
-            data["env_sender"] = None
-        if data["env_recipient"] is not None and data["env_recipient"].isspace():
-            data["env_recipient"] = None
-        if not isinstance(actx, list):
-            data["env_addition"] = [str(actx) if actx is not None else None]
-        else:
-            data["env_addition"] = []
-            for item in actx:
-                data["env_addition"].append(item if item is not None else None)
-        index = 0
-        for item in data["env_addition"]:
-            if item is None or item.isspace():
-                raise RuntimeError("No address for addition given or the address is invalid")
-            env_addr_start = "<"
-            env_addr_end = ">"
-            if item.startswith(env_addr_start):
-                env_addr_start = ""
-            if item.endswith(env_addr_end):
-                env_addr_end = ""
-            data["env_addition"][index] = "{}{}{}".format(env_addr_start, item, env_addr_end)
-            index += 1
-        data["env_addition"] = set(data["env_addition"])
-        if data["env_sender"] is not None:
-            self.log.info("{}: search{}: in sender address {} for pattern {}".format(self.ID,
-                                                                                     self.MODETXT,
-                                                                                     self.F, data["env_sender"]))
-        else:
-            self.log.info("{}: search{}: accept any sender address".format(self.ID, self.MODETXT))
-        if data["subject"] is not None:
-            self.log.info("{}: search{}: in subject {} for pattern {}".
-                           format(self.ID, self.MODETXT, self.headers["subject"].encode("unicode_escape"),
-                                  data["subject"].encode("unicode_escape")))
-        else:
-            self.log.info("{}: search{}: accept any subject".format(self.ID, self.MODETXT))
-        if (data["env_sender"] is None or re.search(data["env_sender"], self.F, re.I)) and \
-                (data["subject"] is None or re.search(data["subject"], self.headers["subject"], re.I | re.UNICODE)):
-            found = False
+        search_clauses = [
+            {
+                "name": "Envelope Sender",
+                "data": self.F,
+                "pattern": self.__str_or_none(sctx.get("env_sender"))
+            },
+            {
+                "name": "Envelope Recipient",
+                "data": self.T["changed"],
+                "pattern": self.__str_or_none(sctx.get("env_recipient"))
+            }
+        ]
+        for name in self.headers.keys():
+            name_lower = name.lower()
+            search_clauses.append(
+                {
+                    "name": name,
+                    "data": self.headers.get(name_lower),
+                    "pattern": self.__str_or_none(sctx.get(name_lower), unicode)
+                }
+            )
+        if self.__search(search_clauses):
+            env_addition = self.__prepare_action(actx, "address for addition", self.__normalize_address)
             changed = set(self.T["changed"])
-            if data["env_recipient"] is None:
-                self.log.info("{}: search{}: accept any recipient address".format(self.ID, self.MODETXT))
-                found = True
-            else:
-                re_rcpt = re.compile(data["env_recipient"], re.I)
-                for addr in changed:
-                    self.log.info("{}: search{}: in recipient address {} for pattern {}".
-                                  format(self.ID, self.MODETXT, addr, data["env_recipient"]))
-                    if re_rcpt.search(addr):
-                        found = True
-                        break
-            if found:
-                self.log.warning("{}: add{}: recipient {}".format(self.ID, self.MODETXT,
-                                                                  ",".join(a for a in data["env_addition"])))
-                changed |= data["env_addition"]
-                self.step_changes.append((self.T["changed"].update, changed - self.T["changed"]))
-                self.log.debug("{}: recipients{}: {}".format(self.ID, self.MODETXT, changed))
+            self.log.warning("{}: add{}: recipient {}".format(self.ID, self.MODETXT, ",".join(a for a in env_addition)))
+            changed |= set(env_addition)
+            self.step_changes.append((self.T["changed"].update, changed - self.T["changed"]))
+            self.log.debug("{}: recipients{}: {}".format(self.ID, self.MODETXT, changed))
 
     def commit_T(self):
         for addr in self.T["original"] - self.T["changed"]:
