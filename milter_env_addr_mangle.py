@@ -41,7 +41,7 @@ class ThisMilter(Milter.Base):
         """
         for item in data:
             if item["data"] is not None and item["pattern"] is not None:
-                if not isinstance(item["data"], (list, tuple)):
+                if not isinstance(item["data"], (list, tuple, set)):
                     data_data = (item["data"], )
                 else:
                     data_data = tuple(item["data"])
@@ -50,10 +50,10 @@ class ThisMilter(Milter.Base):
                         self.ID,
                         self.MODETXT,
                         item["name"],
-                        item_dd.encode("unicode_escape") if item["is_unicode"] else item_dd,
-                        item["pattern"].encode("unicode_escape") if item["is_unicode"] else item["pattern"]
+                        item_dd.encode("unicode_escape") if isinstance(item_dd, unicode) else item_dd,
+                        item["pattern"].encode("unicode_escape") if isinstance(item["pattern"], unicode) else item["pattern"]
                     ))
-                    if item_dd is not None and re.search(item["pattern"], item_dd, re.I | re.UNICODE if item["is_unicode"] else re.I):
+                    if item_dd is not None and re.search(item["pattern"], item_dd, re.I | re.UNICODE if isinstance(item["pattern"], unicode) else re.I):
                         if not mode_and:
                             return True
                         pass
