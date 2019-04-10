@@ -45,6 +45,7 @@ class ThisMilter(Milter.Base):
                     data_data = (item["data"], )
                 else:
                     data_data = tuple(item["data"])
+                found_match = False
                 for item_dd in data_data:
                     self.log.info("{}: search{}: in {} {} for pattern {}".format(
                         self.ID,
@@ -54,11 +55,14 @@ class ThisMilter(Milter.Base):
                         item["pattern"].encode("unicode_escape") if isinstance(item["pattern"], unicode) else item["pattern"]
                     ))
                     if item_dd is not None and re.search(item["pattern"], item_dd, re.I | re.UNICODE if isinstance(item["pattern"], unicode) else re.I):
-                        if not mode_and:
-                            return True
-                        pass
-                    else:
-                        return False
+                        found_match = True
+                        break
+                if found_match and not mode_and:
+                    return True
+                elif found_match:
+                    pass
+                else:
+                    return False
             elif item["pattern"] is None:
                 self.log.info("{}: search{}: accept any {}".format(self.ID, self.MODETXT, item["name"]))
             else:
@@ -127,6 +131,7 @@ class ThisMilter(Milter.Base):
         :param actx: action context
         :return: nothing
         """
+        self.log.info("{}: del{}: entering action".format(self.ID, self.MODETXT))
         search_clauses = [
             {
                 "name": "Envelope Sender",
@@ -149,6 +154,7 @@ class ThisMilter(Milter.Base):
                 }
             )
         if self.__search(search_clauses):
+            self.log.info("{}: del{}: doing action".format(self.ID, self.MODETXT))
             env_deletion = self.__prepare_action(actx, "address for deletion", re.compile, [re.I])
             changed = set(self.T["changed"])
             for titem in self.T["changed"]:
@@ -167,6 +173,7 @@ class ThisMilter(Milter.Base):
         :param actx: action context
         :return: nothing
         """
+        self.log.info("{}: replace{}: entering action".format(self.ID, self.MODETXT))
         env_recipient = self.__str_or_none(sctx.get("env_recipient"))
         if env_recipient is None:
             raise RuntimeError("{} is not given or invalid".format("Envelope Recipient"))
@@ -192,6 +199,7 @@ class ThisMilter(Milter.Base):
                 }
             )
         if self.__search(search_clauses):
+            self.log.info("{}: replace{}: doing action".format(self.ID, self.MODETXT))
             env_replacement = self.__prepare_action(actx, "address for replacement", self.__normalize_address)
             re_rcpt = re.compile(env_recipient, re.I)
             changed = set(self.T["changed"])
@@ -214,6 +222,7 @@ class ThisMilter(Milter.Base):
         :param actx: action context
         :return: nothing
         """
+        self.log.info("{}: add{}: entering action".format(self.ID, self.MODETXT))
         search_clauses = [
             {
                 "name": "Envelope Sender",
@@ -236,6 +245,7 @@ class ThisMilter(Milter.Base):
                 }
             )
         if self.__search(search_clauses):
+            self.log.info("{}: add{}: doing action".format(self.ID, self.MODETXT))
             env_addition = self.__prepare_action(actx, "address for addition", self.__normalize_address)
             changed = set(self.T["changed"])
             self.log.warning("{}: add{}: recipient {}".format(self.ID, self.MODETXT, ",".join(a for a in env_addition)))
