@@ -154,7 +154,6 @@ class ThisMilter(Milter.Base):
                 }
             )
         if self.__search(search_clauses):
-            self.log.info("{}: del{}: doing action".format(self.ID, self.MODETXT))
             env_deletion = self.__prepare_action(actx, "address for deletion", re.compile, [re.I])
             changed = set(self.T["changed"])
             for titem in self.T["changed"]:
@@ -199,7 +198,6 @@ class ThisMilter(Milter.Base):
                 }
             )
         if self.__search(search_clauses):
-            self.log.info("{}: replace{}: doing action".format(self.ID, self.MODETXT))
             env_replacement = self.__prepare_action(actx, "address for replacement", self.__normalize_address)
             re_rcpt = re.compile(env_recipient, re.I)
             changed = set(self.T["changed"])
@@ -245,7 +243,6 @@ class ThisMilter(Milter.Base):
                 }
             )
         if self.__search(search_clauses):
-            self.log.info("{}: add{}: doing action".format(self.ID, self.MODETXT))
             env_addition = self.__prepare_action(actx, "address for addition", self.__normalize_address)
             changed = set(self.T["changed"])
             self.log.warning("{}: add{}: recipient {}".format(self.ID, self.MODETXT, ",".join(a for a in env_addition)))
