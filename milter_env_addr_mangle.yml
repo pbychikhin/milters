@@ -1,4 +1,4 @@
-
+# Search clauses (env_sender, env_recipient etc.) are regexps
 - env_sender: 'sender1@localhost'
   env_recipient: 'recipient1@localhost'
   subject: 'Hello!'

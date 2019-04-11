@@ -148,7 +148,7 @@ class ThisMilter(Milter.Base):
             name_lower = name.lower()
             search_clauses.append(
                 {
-                    "name": name,
+                    "name": name.capitalize(),
                     "data": self.headers.get(name_lower),
                     "pattern": self.__str_or_none(sctx.get(name_lower), unicode)
                 }
@@ -156,13 +156,14 @@ class ThisMilter(Milter.Base):
         if self.__search(search_clauses):
             env_deletion = self.__prepare_action(actx, "address for deletion", re.compile, [re.I])
             changed = set(self.T["changed"])
+            self.log.debug("{}: recipients{}: {}".format(self.ID, self.MODETXT, changed))
             for titem in self.T["changed"]:
                 for ditem in env_deletion:
                     if ditem.search(titem):
                         self.log.warning("{}: del{}: recipient {}".format(self.ID, self.MODETXT, titem))
                         changed.remove(titem)
                         break
-            self.step_changes.append((self.T["changed"].intersection_update, changed))
+            self.step_changes.append((self.T["changed"].difference_update, self.T["changed"] - changed))
             self.log.debug("{}: recipients{}: {}".format(self.ID, self.MODETXT, changed))
 
     def action_replace_recipient(self, sctx, actx):
@@ -192,7 +193,7 @@ class ThisMilter(Milter.Base):
             name_lower = name.lower()
             search_clauses.append(
                 {
-                    "name": name,
+                    "name": name.capitalize(),
                     "data": self.headers.get(name_lower),
                     "pattern": self.__str_or_none(sctx.get(name_lower), unicode)
                 }
@@ -201,6 +202,7 @@ class ThisMilter(Milter.Base):
             env_replacement = self.__prepare_action(actx, "address for replacement", self.__normalize_address)
             re_rcpt = re.compile(env_recipient, re.I)
             changed = set(self.T["changed"])
+            self.log.debug("{}: recipients{}: {}".format(self.ID, self.MODETXT, changed))
             replaced = False
             for titem in self.T["changed"]:
                 if re_rcpt.search(titem):
@@ -237,7 +239,7 @@ class ThisMilter(Milter.Base):
             name_lower = name.lower()
             search_clauses.append(
                 {
-                    "name": name,
+                    "name": name.capitalize(),
                     "data": self.headers.get(name_lower),
                     "pattern": self.__str_or_none(sctx.get(name_lower), unicode)
                 }
@@ -245,6 +247,7 @@ class ThisMilter(Milter.Base):
         if self.__search(search_clauses):
             env_addition = self.__prepare_action(actx, "address for addition", self.__normalize_address)
             changed = set(self.T["changed"])
+            self.log.debug("{}: recipients{}: {}".format(self.ID, self.MODETXT, changed))
             self.log.warning("{}: add{}: recipient {}".format(self.ID, self.MODETXT, ",".join(a for a in env_addition)))
             changed |= set(env_addition)
             self.step_changes.append((self.T["changed"].update, changed - self.T["changed"]))
@@ -262,7 +265,10 @@ class ThisMilter(Milter.Base):
 
     def do_actions(self):
         if self.cfgobj is not None:
+            step_count = 0
             for step in self.cfgobj:
+                step_count += 1
+                self.log.info("{}: step{}: entering step {}".format(self.ID, self.MODETXT, step_count))
                 sctx = {}
                 actions = {}
                 for pkey, pval in step.iteritems():
