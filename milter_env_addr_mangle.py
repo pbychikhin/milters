@@ -272,16 +272,17 @@ class ThisMilter(Milter.Base):
                 sctx = {}
                 actions = {}
                 for pkey, pval in step.iteritems():
-                    if pkey == "actions":
+                    pkey_lower = pkey.lower()
+                    if pkey_lower == "actions":
                         actions = pval
                     else:
-                        sctx[pkey] = pval
+                        sctx[pkey_lower] = pval
                 self.step_changes = []  # Each action should add a 2-element tuple to this list.
                                         # The firs element is a method that merges the changes which are made by the action.
                                         # The second element is the data to be processed by the first element.
                 for action in actions:
                     for akey, aval in action.iteritems():
-                        self.actions[akey](sctx, aval)
+                        self.actions[akey.lower()](sctx, aval)
                 for change in self.step_changes:
                     self.log.debug("{}: merge{}: {} for {}".format(self.ID, self.MODETXT, change[0], change[1]))
                     change[0](change[1])
