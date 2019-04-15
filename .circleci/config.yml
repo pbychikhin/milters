@@ -20,6 +20,11 @@ jobs:
         - master
     steps:
       - run:
+          name: Add EPEL repo
+          command: |
+            wget http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+            rpm -ivh epel-release-latest-7.noarch.rpm
+      - run:
           name: Install prerequisites
           command: yum -y install git zip go
       - run:
