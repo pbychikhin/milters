@@ -44,7 +44,7 @@ class ThisMilter(Milter.Base):
                 if not isinstance(item["data"], (list, tuple, set)):
                     data_data = (item["data"], )
                 else:
-                    data_data = tuple(item["data"])
+                    data_data = item["data"]
                 found_match = False
                 for item_dd in data_data:
                     self.log.info("{}: search{}: in {} {} for pattern {}".format(
