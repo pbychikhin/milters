@@ -1,14 +1,32 @@
+# Search clauses (env_sender, env_recipient etc.) are regexps
+# Action context can be either a scalar or a list
 
 - env_sender: 'sender1@localhost'
   env_recipient: 'recipient1@localhost'
   subject: 'Hello!'
+  from: 'A sender'
   actions:
-    - replace_recipient: 'recipient2@localhost'
+    - replace_recipient:
+      - 'recipient2@localhost'
+      - 'recipient3@localhost'
 
+# Recipient addresses can be embraced by angle braces, which is required by RFC 5321
+# If omitted, angle braces will be added automatically
 - env_sender: 'sender1@localhost'
   env_recipient: 'recipient2@localhost'
   subject: 'Hello!'
+  from: 'A sender'
   actions:
     - add_recipient:
+      - '<recipient4@localhost>'
+      - '<recipient5@localhost>'
+
+# del_recipient's action context are regexps. So don't put angle braces around recipients to be deleted
+- env_sender: 'sender1@localhost'
+  env_recipient: 'recipient4@localhost'
+  subject: 'Hello!'
+  from: 'A sender'
+  actions:
+    - del_recipient:
       - 'recipient4@localhost'
-      - 'recipient5@localhost'
+      - 'recipient6@localhost'

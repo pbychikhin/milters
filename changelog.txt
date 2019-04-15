@@ -1,3 +1,13 @@
+2.0
+- milter_env_addr_mangle:
+    - implemented routine operations as separate functions
+    - added "del_recipient" action
+    - re-implemented all actions: made them more clearer
+    - added search criteria: From-header
+    - made sure that search parameters are strings
+    - made config parameter names case-insensitive
+    - added descriptive comments to the sample config file
+
 1.1
 - milter_env_addr_mangle:
     - changed the merging algorithm: actions don't change data directly. they add changes to the special list instead.
